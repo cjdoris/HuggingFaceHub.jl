@@ -212,10 +212,9 @@ dataset_files(id; kw...) = repo_files("dataset", id; kw...)
 model_files(id; kw...) = repo_files("model", id; kw...)
 space_files(id; kw...) = repo_files("space", id; kw...)
 
-function repo_file_open(func::Function, type, id, path; result_type::Type{T}=Any, client=client(), revision="main", lfs=false) where {T}
+function repo_file_open(func::Function, type, id, path; result_type::Type{T}=Any, client=client(), revision="main") where {T}
     prefix = type == "model" ? "" : "$(type)s/"
-    raw = lfs ? "resolve" : "raw"
-    url = "$(client.api_url)/$prefix$id/$raw/$revision/$path"
+    url = "$(client.api_url)/$prefix$id/resolve/$revision/$path"
     headers = []
     tok = token(; client)
     if tok !== nothing
