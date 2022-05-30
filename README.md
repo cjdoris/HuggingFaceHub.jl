@@ -63,12 +63,25 @@ pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 
 ### Users / Tokens
 
+Some operations, such as modifying a repo or accessing a private repo, require you to
+authenticate yourself using a token.
+
+You can generate a token at [Hugging Face settings](https://huggingface.co/settings/tokens),
+then copy it, call `token_prompt()` and paste the token. The token will be saved to
+`~/.huggingface/token` so you only need to do this once.
+
 - `whoami`
 - `token`
 - `token_set`
 - `token_prompt`
 
 ### Clients
+
+A client controls things like the URL of the Hugging Face REST API and the token to
+authenticate with.
+
+There is a global default client, which is suitable for most users. But you may also create
+new clients and pass them as the `client` keyword argument to most other functions.
 
 - `client`
 - `Client`
