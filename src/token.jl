@@ -3,19 +3,16 @@ function token(; client::Client=client())
     token = client.token
     token !== nothing && return token
     # env var
-    token_env = client.token_env
-    if token_env !== nothing
-        tok = get(ENV, token_env, nothing)
-        if tok !== nothing
-            token = client.token = Token(tok)
-            return token
-        end
+    tok = get(ENV, "HUGGING_FACE_HUB_TOKEN", nothing)
+    if tok !== nothing
+        token = client.token = Token(tok)
+        return token
     end
     # file
-    token_file = client.token_file
-    if token_file !== nothing
-        if isfile(token_file)
-            tok = read(token_file, String)
+    file = token_file(; client)
+    if file !== nothing
+        if isfile(file)
+            tok = read(file, String)
             token = client.token = Token(tok)
             return token
         end
@@ -24,8 +21,23 @@ function token(; client::Client=client())
     return nothing
 end
 
-function token_save(; client::Client=client())
+token_dir() = Scratch.@get_scratch!("tokens")
+
+function token_file(; client::Client=client())
     file = client.token_file
+    if file === nothing
+        return nothing
+    elseif startswith(file, "@")
+        return joinpath(token_dir(), file[2:end])
+    elseif isabspath(file)
+        return file
+    else
+        error("token_file must start with '@' or be an absolute path")
+    end
+end
+
+function token_save(; client::Client=client())
+    file = token_file(; client)
     file === nothing && error("token_file not set")
     tok = token(; client)
     mkpath(dirname(file))
@@ -46,10 +58,3 @@ function token_prompt(; kw...)
     token_set(token; kw...)
     return
 end
-
-# function token_header!(headers, token)
-#     if token !== nothing
-#         push!(headers, "Authorization" => "Bearer $token")
-#     end
-#     return headers
-# end

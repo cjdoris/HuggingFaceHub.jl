@@ -11,15 +11,13 @@ end
 mutable struct Client
     token::Union{Token,Nothing}
     token_file::Union{String,Nothing}
-    token_env::Union{String,Nothing}
     api_url::String
     function Client(;
-        token_file = joinpath(homedir(), ".huggingface", "token"),
-        token_env = "HUGGING_FACE_HUB_TOKEN",
+        token_file = "@default",
         token = nothing,
         api_url = "https://huggingface.co",
     )
-        return new(token, token_file, token_env, api_url)
+        return new(token, token_file, api_url)
     end
 end
 
