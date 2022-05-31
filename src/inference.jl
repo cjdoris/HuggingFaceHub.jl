@@ -22,6 +22,19 @@ function _convert(::Type{T}, @nospecialize(x)) where {T}
     convert(T, x)::T
 end
 
+function _infer_model_id(model::Model, p::String)
+    p2 = model.pipeline_tag
+    if p2 === nothing || p2 == p
+        id = model.id
+        id === nothing && error("no id")
+        return id
+    else
+        error("this model is for the $p2 task, not the $p task")
+    end
+end
+
+_infer_model_id(model::AbstractString, p::String) = model
+
 function Base.show(io::IO, x::TextGenerationResult)
     if get(io, :typeinfo, Any) == typeof(x)
         show(io, x.generated_text)
@@ -34,6 +47,7 @@ function Base.show(io::IO, x::TextGenerationResult)
 end
 
 function infer_text_generation(inputs; model="gpt2", kw...)
+    _infer_model_id(model, "text-generation")
     inputs, single = _nlp_inputs(inputs)
     res = _infer(model, inputs; kw...)
     res = _convert(Vector{Vector{TextGenerationResult}}, res)
