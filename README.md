@@ -13,53 +13,31 @@ pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 
 ## API
 
-### Models
+### Repositories
 
-- `models`
-- `model`
-- `model_tags`
-- `model_create`
-- `model_delete`
-- `model_update`
-- `model_move`
-- `model_files`
-- `model_file_upload`
-- `model_file_delete`
-- `model_file_open`
-- `model_file_read`
+- `models` (search for models)
+- `datasets` (search for datasets)
+- `spaces` (search for spaces)
+- `model` (get info about a model)
+- `dataset` (get info about a dataset)
+- `space` (get info about a space)
+- `refresh` (return updated info for a repo)
+- `model_create` (create a new model)
+- `dataset_create` (create a new dataset)
+- `space_create` (create a new space)
+- `delete` (delete a repo)
+- `update` (update metadata on a repo)
+- `move` (move a repo)
+- `file_upload` (upload a file to a repo)
+- `file_delete` (delete a file from a repo)
+- `file_open` (open a file from a repo)
+- `file_read` (read a file from a repo)
 
-### Datasets
+### Metadata
 
-- `datasets`
-- `dataset`
-- `dataset_tags`
-- `dataset_create`
-- `dataset_delete`
-- `dataset_update`
-- `dataset_move`
-- `dataset_files`
-- `dataset_file_upload`
-- `dataset_file_delete`
-- `dataset_file_open`
-- `dataset_file_read`
-
-### Spaces
-
-- `spaces`
-- `space`
-- `space_create`
-- `space_delete`
-- `space_update`
-- `space_move`
-- `space_files`
-- `space_file_upload`
-- `space_file_delete`
-- `space_file_open`
-- `space_file_read`
-
-### Metrics
-
-- `metrics`
+- `model_tags` (dict of groups of model tags)
+- `dataset_tags` (dict of groups of dataset tags)
+- `metrics` (list of metrics)
 
 ### Users / Tokens
 
@@ -70,10 +48,10 @@ You can generate a token at [Hugging Face settings](https://huggingface.co/setti
 then copy it, call `token_prompt()` and paste the token. The token will be saved to
 `~/.huggingface/token` so you only need to do this once.
 
-- `whoami`
-- `token`
-- `token_set`
-- `token_prompt`
+- `whoami` (get info about the current user)
+- `token` (get the current token)
+- `token_set` (set the token)
+- `token_prompt` (set the token from a prompt)
 
 ### Clients
 
@@ -83,5 +61,5 @@ authenticate with.
 There is a global default client, which is suitable for most users. But you may also create
 new clients and pass them as the `client` keyword argument to most other functions.
 
-- `client`
-- `Client`
+- `client` (get the default client)
+- `Client` (construct a new client)

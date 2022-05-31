@@ -3,6 +3,222 @@ struct APIError <: Exception
     msg::String
 end
 
+abstract type AbstractRepoComponent end
+
+_to_json(x::AbstractDict) = Dict{String,Any}(String(k)=>_to_json(v) for (k,v) in x)
+_to_json(x::AbstractVector) = Any[_to_json(x) for x in x]
+_to_json(x::Union{Real,AbstractString,Nothing}) = x
+
+function _from_json(::Type{T}, x) where {T<:AbstractRepoComponent}
+    ans = T()
+    ans.raw = x
+    dict = Dict{Symbol,Any}(x)
+    for (k, v) in dict
+        if hasfield(T, k)
+            if k == :lastModified
+                v2 = Dates.DateTime(rstrip(v::String, 'Z'))
+            elseif k == :siblings
+                v2 = RepoFile[_from_json(RepoFile, x) for x in v]
+            elseif k in (:config, :cardData, :transformersInfo)
+                v2 = _to_json(v)
+            elseif k == :tags
+                v2 = collect(String, v)
+            elseif k in (:files, :raw)
+                continue
+            else
+                v2 = v
+            end
+            setfield!(ans, k, v2)
+        end
+    end
+    _from_json_post(ans)
+    return ans
+end
+
+_from_json_post(x::AbstractRepoComponent) = return
+
+function Base.show(io::IO, ::MIME"text/plain", x::AbstractRepoComponent)
+    show(io, typeof(x))
+    print(io, ":")
+    blank = true
+    for k in fieldnames(typeof(x))
+        k in (:raw, :siblings) && continue
+        blank = false
+        v = getfield(x, k)
+        v === nothing && continue
+        println(io)
+        print(io, "  ", k, " = ")
+        show(io, v)
+    end
+    blank && print(io, " (blank)")
+    return
+end
+
+abstract type AbstractRepo <: AbstractRepoComponent end
+
+_repo_type(T::Type) = error("not implemented")
+_repo_types(T::Type) = "$(_repo_type(T))s"
+_repo_prefix(T::Type) = "$(_repo_types(T))/"
+
+_repo_type(x) = _repo_type(typeof(x))
+_repo_types(x) = _repo_types(typeof(x))
+_repo_prefix(x) = _repo_prefix(typeof(x))
+
+function _from_json_post(x::AbstractRepo)
+    sibs = x.siblings
+    if sibs !== nothing
+        x.files = String[x.rfilename for x in sibs]
+    end
+    return
+end
+
+function Base.show(io::IO, x::AbstractRepo)
+    if get(io, :typeinfo, Any) == typeof(x)
+        show(io, x.id)
+    else
+        show(io, typeof(x))
+        print(io, "(")
+        show(io, x.id)
+        print(io, ", ")
+        show(io, x.sha)
+        print(io, ", ...)")
+    end
+    return
+end
+
+Base.@kwdef mutable struct RepoFile <: AbstractRepoComponent
+    rfilename::Union{String,Nothing} = nothing
+    raw::Any = nothing
+end
+
+function Base.show(io::IO, x::RepoFile)
+    if get(io, :typeinfo, Any) == typeof(x)
+        show(io, x.rfilename)
+    else
+        show(io, typeof(x))
+        print(io, "(")
+        show(io, x.rfilename)
+        print(io, ")")
+    end
+end
+
+Base.@kwdef mutable struct Model <: AbstractRepo
+    id::Union{String,Nothing} = nothing
+    sha::Union{String,Nothing} = nothing
+    author::Union{String,Nothing} = nothing
+    revision::Union{String,Nothing} = nothing
+    lastModified::Union{Dates.DateTime,Nothing} = nothing
+    private::Union{Bool,Nothing} = nothing
+    files::Union{Vector{String},Nothing} = nothing
+    siblings::Union{Vector{RepoFile},Nothing} = nothing
+    pipeline_tag::Union{String,Nothing} = nothing
+    tags::Union{Vector{String},Nothing} = nothing
+    downloads::Union{Int,Nothing} = nothing
+    library_name::Union{String,Nothing} = nothing
+    mask_token::Union{String,Nothing} = nothing
+    likes::Union{Int,Nothing} = nothing
+    config::Any = nothing  # TODO: ::Config ?
+    cardData::Any = nothing  # TODO: ::CardData ?
+    transformersInfo::Any = nothing  # TODO: ::TransformersInfo ?
+    raw::Any = nothing
+end
+
+_repo_type(::Type{Model}) = "model"
+_repo_prefix(::Type{Model}) = ""
+
+Base.@kwdef mutable struct Dataset <: AbstractRepo
+    id::Union{String,Nothing} = nothing
+    sha::Union{String,Nothing} = nothing
+    author::Union{String,Nothing} = nothing
+    revision::Union{String,Nothing} = nothing
+    lastModified::Union{Dates.DateTime,Nothing} = nothing
+    private::Union{Bool,Nothing} = nothing
+    files::Union{Vector{String},Nothing} = nothing
+    siblings::Union{Vector{RepoFile},Nothing} = nothing
+    tags::Union{Vector{String},Nothing} = nothing
+    gated::Union{Bool,Nothing} = nothing
+    raw::Any = nothing
+end
+
+_repo_type(::Type{Dataset}) = "dataset"
+
+Base.@kwdef mutable struct Space <: AbstractRepo
+    id::Union{String,Nothing} = nothing
+    sha::Union{String,Nothing} = nothing
+    author::Union{String,Nothing} = nothing
+    revision::Union{String,Nothing} = nothing
+    lastModified::Union{Dates.DateTime,Nothing} = nothing
+    private::Union{Bool,Nothing} = nothing
+    files::Union{Vector{String},Nothing} = nothing
+    siblings::Union{Vector{RepoFile},Nothing} = nothing
+    tags::Union{Vector{String},Nothing} = nothing
+    sdk::Union{String,Nothing} = nothing
+    cardData::Any = nothing
+    gated::Union{Bool,Nothing} = nothing
+    raw::Any = nothing
+end
+
+_repo_type(::Type{Space}) = "space"
+
+abstract type AbstractRepoTag <: AbstractRepoComponent end
+
+function Base.show(io::IO, x::AbstractRepoTag)
+    if get(io, :typeinfo, Any) == typeof(x)
+        show(io, x.id)
+    else
+        show(io, typeof(x))
+        print(io, "(")
+        show(io, x.id)
+        print(io, ", ...)")
+    end
+end
+
+Base.@kwdef mutable struct ModelTag <: AbstractRepoTag
+    id::Union{String,Nothing} = nothing
+    label::Union{String,Nothing} = nothing
+    type::Union{String,Nothing} = nothing
+    raw::Any = nothing
+end
+
+_tag_type(::Type{Model}) = ModelTag
+
+Base.@kwdef mutable struct DatasetTag <: AbstractRepoTag
+    id::Union{String,Nothing} = nothing
+    label::Union{String,Nothing} = nothing
+    type::Union{String,Nothing} = nothing
+    raw::Any = nothing
+end
+
+_tag_type(::Type{Dataset}) = DatasetTag
+
+Base.@kwdef mutable struct Metric <: AbstractRepoComponent
+    id::Union{String,Nothing} = nothing
+    citation::Union{String,Nothing} = nothing
+    description::Union{String,Nothing} = nothing
+    key::Union{String,Nothing} = nothing
+    raw::Any = nothing
+end
+
+function Base.show(io::IO, x::Metric)
+    if get(io, :typeinfo, Any) == typeof(x)
+        show(io, x.id)
+    else
+        show(io, typeof(x))
+        print(io, "(")
+        show(io, x.id)
+        print(io, ", ...)")
+    end
+end
+
+Base.@kwdef mutable struct User <: AbstractRepoComponent
+    name::Union{String,Nothing} = nothing
+    fullname::Union{String,Nothing} = nothing
+    email::Union{String,Nothing} = nothing
+    emailVerified::Union{Bool,Nothing} = nothing
+    plan::Union{String,Nothing} = nothing
+    raw::Any = nothing
+end
+
 function _api_default_handler(res)
     if res.status >= 300
         msg = try
@@ -15,18 +231,18 @@ function _api_default_handler(res)
     return res
 end
 
-function _api_request(method, endpoint; headers=[], json=nothing, payload="", client=client(), handler=_api_default_handler, kw...)
+function _api_request(method, endpoint; headers=[], json=nothing, body="", client=client(), handler=_api_default_handler, kw...)
     tok = token(; client)
     headers = collect(Pair{String,String}, headers)
     if tok !== nothing
         headers = push!(headers, "Authorization" => "Bearer $(tok.value)")
     end
     if json !== nothing
-        payload = JSON3.write(json)
+        body = JSON3.write(json)
         push!(headers, "Content-Type" => "application/json")
     end
     url = "$(client.api_url)/$endpoint"
-    res = HTTP.request(method, url, headers, payload; kw..., status_exception=false)
+    res = HTTP.request(method, url, headers, body; kw..., status_exception=false)
     return handler(res)
 end
 
@@ -88,41 +304,72 @@ function _api_json(; kw...)
     return json
 end
 
-function repos(type; search=nothing, author=nothing, filter=nothing, sort=nothing, direction=nothing, limit=nothing, full=nothing, config=nothing, client=client())
+function repos(::Type{T}; search=nothing, author=nothing, filter=nothing, sort=nothing, direction=nothing, limit=nothing, full=nothing, config=nothing, client::Client=client()) where {T<:AbstractRepo}
     query = _api_query(; search, author, filter, sort, direction, limit, full, config)
-    return _api_request_json("GET", "api/$(type)s"; query, client)
+    res = _api_request_json("GET", "api/$(_repo_types(T))"; query, client)
+    return T[_from_json(T, x) for x in res]
 end
 
-models(; kw...) = repos("model"; kw...)
-datasets(; kw...) = repos("dataset"; kw...)
-spaces(; kw...) = repos("space"; kw...)
+models(; kw...) = repos(Model; kw...)
+datasets(; kw...) = repos(Dataset; kw...)
+spaces(; kw...) = repos(Space; kw...)
 
-function repo(type, id; revision=nothing, client=client())
-    endpoint = "api/$(type)s/$id"
-    if revision !== nothing
-        endpoint *= "/revision/$revision"
+function repo(::Type{T}, src; revision::Union{AbstractString,Nothing}=nothing, client::Client=client(), latest::Bool=true) where {T<:AbstractRepo}
+    if src isa T
+        id = src.id !== nothing ? src.id : error("no id")
+        sha = revision !== nothing ? revision : (!latest && src.sha !== nothing) ? src.sha : src.revision
+        revision = revision !== nothing ? revision : src.revision
+    elseif src isa AbstractString
+        id = src
+        sha = revision
+    else
+        error("expecting a String (the ID) or a $T")
     end
-    return _api_request_json("GET", endpoint; client)
+    endpoint = "api/$(_repo_types(T))/$id"
+    if sha !== nothing
+        endpoint *= "/revision/$sha"
+    end
+    res = _api_request_json("GET", endpoint; client)
+    ans = _from_json(T, res)
+    ans.revision = revision
+    return ans
 end
 
-model(id; kw...) = repo("model", id; kw...)
-dataset(id; kw...) = repo("dataset", id; kw...)
-space(id; kw...) = repo("space", id; kw...)
+model(id; kw...) = repo(Model, id; kw...)
+dataset(id; kw...) = repo(Dataset, id; kw...)
+space(id; kw...) = repo(Space, id; kw...)
 
-function model_tags(; client=client())
-    return _api_request_json("GET", "api/models-tags-by-type"; client)
+# TODO: in-place refresh!
+refresh(x::AbstractRepo; kw...) = repo(typeof(x), x; kw...)
+
+function repo_tags(::Type{T}; client::Client=client()) where {T<:AbstractRepo}
+    Tag = _tag_type(T)
+    res = _api_request_json("GET", "api/$(_repo_types(T))-tags-by-type"; client)
+    return Dict{String,Vector{Tag}}(String(k) => Tag[_from_json(Tag, v) for v in v] for (k, v) in res)
 end
 
-function dataset_tags(; client=client())
-    return _api_request_json("GET", "api/datasets-tags-by-type"; client)
+model_tags(; kw...) = repo_tags(Model; kw...)
+dataset_tags(; kw...) = repo_tags(Dataset; kw...)
+
+function metrics(; client::Client=client())
+    res = _api_request_json("GET", "api/metrics"; client)
+    return Metric[_from_json(Metric, x) for x in res]
 end
 
-function metrics(; client=client())
-    return _api_request_json("GET", "api/metrics"; client)
-end
+_repo_id(x::AbstractString) = x
+_repo_id(x::Nothing) = error("id missing")
+_repo_id(x::AbstractRepo) = _repo_id(x.id)
 
-function _split_repo_id(id)
-    parts = split(id, '/')
+_repo_revision(x::AbstractString) = x
+_repo_revision(x::Nothing) = error("revision missing")
+_repo_revision(x::AbstractRepo) = _repo_revision(x.revision)
+
+_repo_sha(x::AbstractString) = x
+_repo_sha(x::Nothing) = error("revision (sha) missing")
+_repo_sha(x::AbstractRepo) = _repo_sha(x.sha)
+
+function _split_repo_id(id::AbstractString)
+    parts = split(_repo_id(id), '/')
     if length(parts) == 2
         return (parts[1], parts[2])
     else
@@ -130,90 +377,74 @@ function _split_repo_id(id)
     end
 end
 
-function repo_create(type, id; client=client(), private=false, sdk=nothing, exist_ok=false)
+function create(::Type{T}, id::AbstractString; client::Client=client(), private=false, sdk=nothing, exist_ok=false) where {T<:AbstractRepo}
     organization, name = _split_repo_id(id)
+    type = _repo_type(T)
     json = _api_json(; name, organization, type, private, sdk)
     if exist_ok
         handler = res -> res.status == 409 ? res : _api_default_handler(res)
-        return _api_request_json("POST", "api/repos/create"; client, json, handler)
+        _api_request("POST", "api/repos/create"; client, json, handler)
     else
-        return _api_request_json("POST", "api/repos/create"; client, json)
+        _api_request("POST", "api/repos/create"; client, json)
     end
+    return
 end
 
-dataset_create(id; kw...) = repo_create("dataset", id; kw...)
-model_create(id; kw...) = repo_create("model", id; kw...)
-space_create(id; kw...) = repo_create("space", id; kw...)
+dataset_create(id; kw...) = create(Dataset, id; kw...)
+model_create(id; kw...) = create(Model, id; kw...)
+space_create(id; kw...) = create(Space, id; kw...)
 
-function repo_delete(type, id; client=client())
-    organization, name = _split_repo_id(id)
+function delete(repo::AbstractRepo; client::Client=client())
+    organization, name = _split_repo_id(repo.id)
+    type = _repo_type(repo)
     json = _api_json(; name, organization, type)
     _api_request("DELETE", "api/repos/delete"; client, json)
     return
 end
 
-dataset_delete(id; kw...) = repo_delete("dataset", id; kw...)
-model_delete(id; kw...) = repo_delete("model", id; kw...)
-space_delete(id; kw...) = repo_delete("space", id; kw...)
-
-function repo_update(type, id; client=client(), private=nothing)
+function update(repo::AbstractRepo; client::Client=client(), private::Union{Bool,Nothing}=nothing)
+    id = _repo_id(repo)
     json = _api_json(; private)
-    prefix = type == "model" ? "" : "$(type)s/"
+    prefix = _repo_prefix(repo)
     endpoint = "api/$prefix$id/settings"
-    return _api_request_json("PUT", endpoint; client, json)
+    _api_request("PUT", endpoint; client, json)
+    return
 end
 
-dataset_update(id; kw...) = repo_update("dataset", id; kw...)
-model_update(id; kw...) = repo_update("model", id; kw...)
-space_update(id; kw...) = repo_update("space", id; kw...)
-
-function repo_move(type, fromRepo, toRepo; client=client())
+function move(repo::AbstractRepo, toRepo::AbstractString; client::Client=client())
+    fromRepo = _repo_id(repo)
+    type = _repo_type(repo)
     json = _api_json(; fromRepo, toRepo, type)
     _api_request("POST", "api/repos/move"; client, json)
     return
 end
 
-dataset_move(a, b; kw...) = repo_move("dataset", a, b; kw...)
-model_move(a, b; kw...) = repo_move("model", a, b; kw...)
-space_move(a, b; kw...) = repo_move("space", a, b; kw...)
-
-function repo_file_upload(type, id, path, file::IO; client=client(), revision="main")
-    prefix = type == "model" ? "" : "$(type)s/"
+function file_upload(repo::AbstractRepo, path::AbstractString, file::IO; client::Client=client(), revision::AbstractString=_repo_revision(repo))
+    revision === nothing && error("revision missing")
+    id = _repo_id(repo)
+    prefix = _repo_prefix(repo)
     endpoint = "api/$prefix$id/upload/$revision/$path"
-    return _api_request_json("POST", endpoint; client, payload=file)
+    _api_request("POST", endpoint; client, body=file)
+    return
 end
 
-function repo_file_upload(type, id, path, file::AbstractString; kw...)
-    open(file) do
-        repo_file_upload(type, id, path, io; kw...)
+function file_upload(repo::AbstractRepo, path::AbstractString, file::AbstractString; kw...)
+    open(file) do io
+        repo_file_upload(repo, path, io; kw...)
     end
 end
 
-dataset_file_upload(id, path, file; kw...) = repo_file_upload("dataset", id, path, file; kw...)
-model_file_upload(id, path, file; kw...) = repo_file_upload("model", id, path, file; kw...)
-space_file_upload(id, path, file; kw...) = repo_file_upload("space", id, path, file; kw...)
-
-function repo_file_delete(type, id, path; client=client(), revision="main")
-    prefix = type == "model" ? "" : "$(type)s/"
+function file_delete(repo::AbstractRepo, path::AbstractString; client::Client=client(), revision::AbstractString=_repo_revision(repo))
+    id = _repo_id(repo)
+    prefix = _repo_prefix(repo)
     endpoint = "api/$prefix$id/delete/$revision/$path"
     _api_request("DELETE", endpoint; client)
     return
 end
 
-dataset_file_delete(id, path; kw...) = repo_file_delete("dataset", id, path; kw...)
-model_file_delete(id, path; kw...) = repo_file_delete("model", id, path; kw...)
-space_file_delete(id, path; kw...) = repo_file_delete("space", id, path; kw...)
-
-function repo_files(type, id; kw...)
-    return String[x["rfilename"] for x in repo(type, id; kw...)["siblings"]]
-end
-
-dataset_files(id; kw...) = repo_files("dataset", id; kw...)
-model_files(id; kw...) = repo_files("model", id; kw...)
-space_files(id; kw...) = repo_files("space", id; kw...)
-
-function repo_file_open(func::Function, type, id, path; result_type::Type{T}=Any, client=client(), revision="main") where {T}
-    prefix = type == "model" ? "" : "$(type)s/"
+function file_open(func::Function, repo::AbstractRepo, path::AbstractString; result_type::Type{T}=Any, client::Client=client(), revision::AbstractString=_repo_sha(repo)) where {T}
+    id = _repo_id(repo)
+    prefix = _repo_prefix(repo)
     url = "$(client.api_url)/$prefix$id/resolve/$revision/$path"
     headers = []
     tok = token(; client)
@@ -232,17 +463,10 @@ function repo_file_open(func::Function, type, id, path; result_type::Type{T}=Any
     end
 end
 
-dataset_file_open(func, id, path; kw...) = repo_file_open(func, "dataset", id, path; kw...)
-model_file_open(func, id, path; kw...) = repo_file_open(func, "model", id, path; kw...)
-space_file_open(func, id, path; kw...) = repo_file_open(func, "space", id, path; kw...)
-
-repo_file_read(type, id, path; kw...) = repo_file_open(read, type, id, path; result_type=Vector{UInt8}, kw...)
-repo_file_read(type, id, path, ::Type{T}; kw...) where {T} = repo_file_open(io->read(io, T), type, id, path; result_type=T, kw...)
-
-dataset_file_read(args...; kw...) = repo_file_read("dataset", args...; kw...)
-model_file_read(args...; kw...) = repo_file_read("model", args...; kw...)
-space_file_read(args...; kw...) = repo_file_read("space", args...; kw...)
+file_read(repo::AbstractRepo, path; kw...) = file_open(read, repo, path; result_type=Vector{UInt8}, kw...)
+file_read(repo::AbstractRepo, path, ::Type{T}; kw...) where {T} = file_open(io->read(io, T), repo, path; result_type=T, kw...)
 
 function whoami(; client=client())
-    return _api_request_json("GET", "api/whoami-v2"; client)
+    res = _api_request_json("GET", "api/whoami-v2"; client)
+    return _from_json(User, res)
 end
