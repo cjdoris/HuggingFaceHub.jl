@@ -13,6 +13,9 @@ pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 
 ## API
 
+None of these functions are exported. You can import the module like
+`import HuggingFaceHub as HF` to access the functions like `HF.models()`.
+
 ### Repositories
 
 - `models` (search for models)
@@ -45,13 +48,14 @@ Some operations, such as modifying a repo or accessing a private repo, require y
 authenticate yourself using a token.
 
 You can generate a token at [Hugging Face settings](https://huggingface.co/settings/tokens),
-then copy it, call `token_prompt()` and paste the token. The token will be saved to
-`~/.huggingface/token` so you only need to do this once.
+then copy it, call `token_prompt()` and paste the token. The token will be cached so you
+only need to do this once.
 
 - `whoami` (get info about the current user)
 - `token` (get the current token)
 - `token_set` (set the token)
 - `token_prompt` (set the token from a prompt)
+- `token_file` (the file where the token is cached)
 
 ### Clients
 
