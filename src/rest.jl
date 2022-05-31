@@ -5,6 +5,8 @@ end
 
 abstract type Object end
 
+Base.convert(::Type{T}, x::JSON3.Object) where {T<:Object} = _from_json(T, x)
+
 _to_json(x::AbstractDict) = Dict{String,Any}(String(k)=>_to_json(v) for (k,v) in x)
 _to_json(x::AbstractVector) = Any[_to_json(x) for x in x]
 _to_json(x::Union{Real,AbstractString,Nothing}) = x
