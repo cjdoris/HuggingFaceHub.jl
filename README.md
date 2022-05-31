@@ -48,14 +48,16 @@ Some operations, such as modifying a repo or accessing a private repo, require y
 authenticate yourself using a token.
 
 You can generate a token at [Hugging Face settings](https://huggingface.co/settings/tokens),
-then copy it, call `token_prompt()` and paste the token. The token will be cached so you
-only need to do this once.
+then copy it, call `token_prompt()` and paste the token. The token will be saved to disk so
+you only need to do this once.
+
+Alternatively you can set the token in the environment variable `HUGGING_FACE_HUB_TOKEN`.
 
 - `whoami` (get info about the current user)
 - `token` (get the current token)
 - `token_set` (set the token)
 - `token_prompt` (set the token from a prompt)
-- `token_file` (the file where the token is cached)
+- `token_file` (the file where the token is saved)
 
 ### Clients
 
