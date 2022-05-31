@@ -12,12 +12,14 @@ mutable struct Client
     token::Union{Token,Nothing}
     token_file::Union{String,Nothing}
     api_url::String
+    inference_api_url::String
     function Client(;
         token_file = "@default",
         token = nothing,
         api_url = "https://huggingface.co",
+        inference_api_url = "https://api-inference.huggingface.co",
     )
-        return new(token, token_file, api_url)
+        return new(token, token_file, api_url, inference_api_url)
     end
 end
 

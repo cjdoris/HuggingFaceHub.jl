@@ -3,13 +3,13 @@ struct APIError <: Exception
     msg::String
 end
 
-abstract type AbstractRepoComponent end
+abstract type Object end
 
 _to_json(x::AbstractDict) = Dict{String,Any}(String(k)=>_to_json(v) for (k,v) in x)
 _to_json(x::AbstractVector) = Any[_to_json(x) for x in x]
 _to_json(x::Union{Real,AbstractString,Nothing}) = x
 
-function _from_json(::Type{T}, x) where {T<:AbstractRepoComponent}
+function _from_json(::Type{T}, x) where {T<:Object}
     ans = T()
     ans.raw = x
     dict = Dict{Symbol,Any}(x)
@@ -35,9 +35,9 @@ function _from_json(::Type{T}, x) where {T<:AbstractRepoComponent}
     return ans
 end
 
-_from_json_post(x::AbstractRepoComponent) = return
+_from_json_post(x::Object) = return
 
-function Base.show(io::IO, ::MIME"text/plain", x::AbstractRepoComponent)
+function Base.show(io::IO, ::MIME"text/plain", x::Object)
     show(io, typeof(x))
     print(io, ":")
     blank = true
@@ -54,7 +54,7 @@ function Base.show(io::IO, ::MIME"text/plain", x::AbstractRepoComponent)
     return
 end
 
-abstract type AbstractRepo <: AbstractRepoComponent end
+abstract type AbstractRepo <: Object end
 
 _repo_type(T::Type) = error("not implemented")
 _repo_types(T::Type) = "$(_repo_type(T))s"
@@ -86,7 +86,7 @@ function Base.show(io::IO, x::AbstractRepo)
     return
 end
 
-Base.@kwdef mutable struct RepoFile <: AbstractRepoComponent
+Base.@kwdef mutable struct RepoFile <: Object
     rfilename::Union{String,Nothing} = nothing
     raw::Any = nothing
 end
@@ -160,7 +160,7 @@ end
 
 _repo_type(::Type{Space}) = "space"
 
-abstract type AbstractRepoTag <: AbstractRepoComponent end
+abstract type AbstractRepoTag <: Object end
 
 function Base.show(io::IO, x::AbstractRepoTag)
     if get(io, :typeinfo, Any) == typeof(x)
@@ -191,7 +191,7 @@ end
 
 _tag_type(::Type{Dataset}) = DatasetTag
 
-Base.@kwdef mutable struct Metric <: AbstractRepoComponent
+Base.@kwdef mutable struct Metric <: Object
     id::Union{String,Nothing} = nothing
     citation::Union{String,Nothing} = nothing
     description::Union{String,Nothing} = nothing
@@ -210,7 +210,7 @@ function Base.show(io::IO, x::Metric)
     end
 end
 
-Base.@kwdef mutable struct User <: AbstractRepoComponent
+Base.@kwdef mutable struct User <: Object
     name::Union{String,Nothing} = nothing
     fullname::Union{String,Nothing} = nothing
     email::Union{String,Nothing} = nothing
@@ -231,7 +231,7 @@ function _api_default_handler(res)
     return res
 end
 
-function _api_request(method, endpoint; headers=[], json=nothing, body="", client=client(), handler=_api_default_handler, kw...)
+function _api_request(method, endpoint; headers=[], json=nothing, body="", client=client(), handler=_api_default_handler, inference=false, kw...)
     tok = token(; client)
     headers = collect(Pair{String,String}, headers)
     if tok !== nothing
@@ -241,7 +241,8 @@ function _api_request(method, endpoint; headers=[], json=nothing, body="", clien
         body = JSON3.write(json)
         push!(headers, "Content-Type" => "application/json")
     end
-    url = "$(client.api_url)/$endpoint"
+    base = inference ? client.inference_api_url : client.api_url
+    url = "$base/$endpoint"
     res = HTTP.request(method, url, headers, body; kw..., status_exception=false)
     return handler(res)
 end
