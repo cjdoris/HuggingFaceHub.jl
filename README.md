@@ -2,11 +2,11 @@
 
 A Julia package to interact with the [Hugging Face Hub](https://huggingface.co/).
 
-You can use it to inspect, download and update models, datasets and spaces, including
-private ones.
-
-You can also call the Inference API to easily make predictions on text, audio and image
-data.
+- Search for repos (models, datasets and spaces).
+- Get repo metadata.
+- Download and upload files.
+- Supports private repos.
+- Call the Inference API to easily make model predictions.
 
 ## Install
 
