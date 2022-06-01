@@ -283,7 +283,16 @@ const INFER = Dict(
     infer(model, inputs; ...)
 
 Convenience function to call one the following, depending on `model.pipeline_tag`:
+- [`infer_fill_mask`](@ref)
 - [`infer_text_generation`](@ref)
+- [`infer_text2text_generation`](@ref)
+- [`infer_summarization`](@ref)
+- [`infer_text_classification`](@ref)
+- [`infer_zero_shot_classification`](@ref)
+- [`infer_token_classification`](@ref)
+- [`infer_translation`](@ref)
+- [`infer_feature_extraction`](@ref)
+- [`infer_question_answering`](@ref)
 """
 function infer(model::Model, inputs; kw...)
     p = model.pipeline_tag
@@ -295,4 +304,26 @@ function infer(model::Model, inputs; kw...)
         error("unimplemented inference task: $p")
     end
     return f(inputs; model, kw...)
+end
+
+"""
+    infer_generic(model, inputs; [client], [pipeline], [use_gpu], [use_cache], [wait_for_model], params...)
+
+Call the Hugging Face Inference API on the given `model` and `inputs`.
+
+This is a generic interface, meaning the inputs are not validated, and the results are
+returned as generic JSON objects: dicts, vectors, strings and numbers.
+
+The pipeline to use is the default for `model`, but can be overwritten with `pipeline`.
+"""
+function infer_generic(model::Union{Model,AbstractString}, inputs; pipeline::Union{Nothing,AbstractString}=nothing, client::Client=client(), use_gpu::Bool=false, use_cache::Bool=true, wait_for_model::Bool=true, kw...)
+    @nospecialize kw
+    pipeline === nothing || _check_pipeline(model, pipeline)
+    model_id = _repo_id(model)
+    endpoint = pipeline === nothing ? "models/$model_id" : "pipeline/$pipeline/$model_id"
+    params = Dict{String,Any}(String(k)=>v for (k, v) in pairs(kw) if v !== Undefined())
+    options = Dict{String,Any}("use_gpu"=>use_gpu, "use_cache"=>use_cache, "wait_for_model"=>wait_for_model)
+    json = Dict{String,Any}("inputs"=>inputs, "parameters"=>params, "options"=>options)
+    res = _api_request_json("POST", endpoint; json, inference=true)
+    return _to_json(res)
 end
