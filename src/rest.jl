@@ -24,7 +24,7 @@ function _to_json(x; tight::Bool=false)
             vs = Tuple(Any[_to_json(x[k]; tight) for k in ks])
             NamedTuple{ns}(vs)
         else
-            return Dict{String}(String(k) => _to_json(v; tight) for (k, v) in x)
+            return Dict{String,Any}(String(k) => _to_json(v; tight) for (k, v) in x)
         end
     else
         error("expecting nothing, number, string, vector or dict, got $(typeof(x))")
