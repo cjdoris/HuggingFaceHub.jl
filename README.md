@@ -5,6 +5,9 @@ A Julia package to interact with the [Hugging Face Hub](https://huggingface.co/)
 You can use it to inspect, download and update models, datasets and spaces, including
 private ones.
 
+You can also call the Inference API to easily make predictions on text, audio and image
+data.
+
 ## Install
 
 ```
@@ -15,6 +18,8 @@ pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 
 None of these functions are exported. You can import the module like
 `import HuggingFaceHub as HF` to access the functions like `HF.models()`.
+
+Read the docstrings for more information about each function.
 
 ### Repositories
 
