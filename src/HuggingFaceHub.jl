@@ -8,7 +8,7 @@ import Scratch
 include("client.jl")
 include("token.jl")
 include("rest.jl")
-include("inference.jl")
+include("infer.jl")
 
 function __init__()
     CLIENT[] = Client()
