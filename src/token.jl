@@ -1,3 +1,8 @@
+"""
+    token(; [client])
+
+Get the authentication token. Can return `nothing` if it is not set.
+"""
 function token(; client::Client=client())
     # already set
     token = client.token
@@ -23,6 +28,11 @@ end
 
 token_dir() = Scratch.@get_scratch!("tokens")
 
+"""
+    token_file(; [client])
+
+The path of the file where the token can be saved.
+"""
 function token_file(; client::Client=client())
     file = client.token_file
     if file === nothing
@@ -45,12 +55,28 @@ function token_save(; client::Client=client())
     return
 end
 
+"""
+    token_set(token; [client], [save])
+
+Set the authentication token.
+
+Will automatically save the token for future re-use if `client.token_file` is set (it is
+by default). This can be over-ridden with `save=false`.
+"""
 function token_set(token; client::Client=client(), save::Bool=client.token_file!==nothing)
     client.token = Token(token)
     save && token_save(; client)
     return
 end
 
+"""
+    token_prompt(; [client], [save])
+
+Set the authentication token by prompting for it in the REPL.
+
+Will automatically save the token for future re-use if `client.token_file` is set (it is
+by default). This can be over-ridden with `save=false`.
+"""
 function token_prompt(; kw...)
     buffer = Base.getpass("Token")
     token = read(buffer, String)
