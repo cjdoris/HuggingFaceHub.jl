@@ -11,6 +11,9 @@ _to_json(x::AbstractDict) = Dict{String,Any}(String(k)=>_to_json(v) for (k,v) in
 _to_json(x::AbstractVector) = Any[_to_json(x) for x in x]
 _to_json(x::Union{Real,AbstractString,Nothing}) = x
 
+_id_field(x::Object) = hasfield(typeof(x), :id) ? :id : nothing
+_show_fields(x::Object) = _id_field(x) === nothing ? fieldnames(typeof(x)) : (_id_field(x),)
+
 function _from_json(::Type{T}, x) where {T<:Object}
     ans = T()
     ans.raw = x
@@ -23,8 +26,10 @@ function _from_json(::Type{T}, x) where {T<:Object}
                 v2 = RepoFile[_from_json(RepoFile, x) for x in v]
             elseif k in (:config, :cardData, :transformersInfo)
                 v2 = _to_json(v)
-            elseif k == :tags
+            elseif k in (:tags, :labels)
                 v2 = collect(String, v)
+            elseif k == :scores
+                v2 = collect(Float64, v)
             elseif k in (:files, :raw)
                 continue
             else
@@ -38,6 +43,25 @@ function _from_json(::Type{T}, x) where {T<:Object}
 end
 
 _from_json_post(x::Object) = return
+
+function Base.show(io::IO, x::Object)
+    k = _id_field(x)
+    if k !== nothing && get(io, :typeinfo, Any) == typeof(x)
+        show(io, getfield(x, k))
+    else
+        show(io, typeof(x))
+        print(io, "(")
+        first = true
+        for k in _show_fields(x)
+            k == :raw && continue
+            first || print(io, ", ")
+            first = false
+            show(io, getfield(x, k))
+        end
+        print(io, ", ...)")
+    end
+    return
+end
 
 function Base.show(io::IO, ::MIME"text/plain", x::Object)
     show(io, typeof(x))
@@ -74,35 +98,14 @@ function _from_json_post(x::AbstractRepo)
     return
 end
 
-function Base.show(io::IO, x::AbstractRepo)
-    if get(io, :typeinfo, Any) == typeof(x)
-        show(io, x.id)
-    else
-        show(io, typeof(x))
-        print(io, "(")
-        show(io, x.id)
-        print(io, ", ")
-        show(io, x.sha)
-        print(io, ", ...)")
-    end
-    return
-end
+_show_fields(::AbstractRepo) = (:id, :sha)
 
 Base.@kwdef mutable struct RepoFile <: Object
     rfilename::Union{String,Nothing} = nothing
     raw::Any = nothing
 end
 
-function Base.show(io::IO, x::RepoFile)
-    if get(io, :typeinfo, Any) == typeof(x)
-        show(io, x.rfilename)
-    else
-        show(io, typeof(x))
-        print(io, "(")
-        show(io, x.rfilename)
-        print(io, ")")
-    end
-end
+_id_field(::RepoFile) = :rfilename
 
 Base.@kwdef mutable struct Model <: AbstractRepo
     id::Union{String,Nothing} = nothing
@@ -164,17 +167,6 @@ _repo_type(::Type{Space}) = "space"
 
 abstract type AbstractRepoTag <: Object end
 
-function Base.show(io::IO, x::AbstractRepoTag)
-    if get(io, :typeinfo, Any) == typeof(x)
-        show(io, x.id)
-    else
-        show(io, typeof(x))
-        print(io, "(")
-        show(io, x.id)
-        print(io, ", ...)")
-    end
-end
-
 Base.@kwdef mutable struct ModelTag <: AbstractRepoTag
     id::Union{String,Nothing} = nothing
     label::Union{String,Nothing} = nothing
@@ -201,17 +193,6 @@ Base.@kwdef mutable struct Metric <: Object
     raw::Any = nothing
 end
 
-function Base.show(io::IO, x::Metric)
-    if get(io, :typeinfo, Any) == typeof(x)
-        show(io, x.id)
-    else
-        show(io, typeof(x))
-        print(io, "(")
-        show(io, x.id)
-        print(io, ", ...)")
-    end
-end
-
 Base.@kwdef mutable struct User <: Object
     name::Union{String,Nothing} = nothing
     fullname::Union{String,Nothing} = nothing
@@ -220,6 +201,8 @@ Base.@kwdef mutable struct User <: Object
     plan::Union{String,Nothing} = nothing
     raw::Any = nothing
 end
+
+_id_field(::User) = :name
 
 function _api_default_handler(res)
     if res.status >= 300
@@ -313,8 +296,25 @@ function repos(::Type{T}; search=nothing, author=nothing, filter=nothing, sort=n
     return T[_from_json(T, x) for x in res]
 end
 
+"""
+    models(; [client], [search], [author], [filter], [sort], [direction], [limit], [full], [config])
+
+A list of models.
+"""
 models(; kw...) = repos(Model; kw...)
+
+"""
+    datasets(; [client], [search], [author], [filter], [sort], [direction], [limit], [full], [config])
+
+A list of datasets.
+"""
 datasets(; kw...) = repos(Dataset; kw...)
+
+"""
+    spaces(; [client], [search], [author], [filter], [sort], [direction], [limit], [full], [config])
+
+A list of spaces.
+"""
 spaces(; kw...) = repos(Space; kw...)
 
 function repo(::Type{T}, src; revision::Union{AbstractString,Nothing}=nothing, client::Client=client(), latest::Bool=true) where {T<:AbstractRepo}
@@ -338,12 +338,36 @@ function repo(::Type{T}, src; revision::Union{AbstractString,Nothing}=nothing, c
     return ans
 end
 
+"""
+    model(id; [client], [revision])
+
+The model with the given `id`.
+"""
 model(id; kw...) = repo(Model, id; kw...)
+
+"""
+    dataset(id; [client], [revision])
+
+The dataset with the given `id`.
+"""
 dataset(id; kw...) = repo(Dataset, id; kw...)
+
+"""
+    space(id; [client], [revision])
+
+The space with the given `id`.
+"""
 space(id; kw...) = repo(Space, id; kw...)
 
-# TODO: in-place refresh!
-refresh(x::AbstractRepo; kw...) = repo(typeof(x), x; kw...)
+"""
+    refresh(repo; [client], [revision], [latest])
+
+An updated copy of the given `repo`.
+
+If `revision` is not given, then by default the latest commit on `repo.revision` is
+returned. Set `latest=false` to instead return the same commit as `repo`.
+"""
+refresh(repo::AbstractRepo; kw...) = repo(typeof(repo), repo; kw...)
 
 function repo_tags(::Type{T}; client::Client=client()) where {T<:AbstractRepo}
     Tag = _tag_type(T)
@@ -351,9 +375,25 @@ function repo_tags(::Type{T}; client::Client=client()) where {T<:AbstractRepo}
     return Dict{String,Vector{Tag}}(String(k) => Tag[_from_json(Tag, v) for v in v] for (k, v) in res)
 end
 
+"""
+    model_tags(; [client])
+
+A dict mapping tag group names to lists of tags for models.
+"""
 model_tags(; kw...) = repo_tags(Model; kw...)
+
+"""
+    dataset_tags(; [client])
+
+A dict mapping tag group names to lists of tags for datasets.
+"""
 dataset_tags(; kw...) = repo_tags(Dataset; kw...)
 
+"""
+    metrics(; [client])
+
+List all metrics.
+"""
 function metrics(; client::Client=client())
     res = _api_request_json("GET", "api/metrics"; client)
     return Metric[_from_json(Metric, x) for x in res]
@@ -393,10 +433,32 @@ function create(::Type{T}, id::AbstractString; client::Client=client(), private=
     return
 end
 
+"""
+    dataset_create(id; [client], [private], [exist_ok])
+
+Create a new dataset with the given `id`, of the form `<username>/<reponame>`.
+"""
 dataset_create(id; kw...) = create(Dataset, id; kw...)
+
+"""
+    model_create(id; [client], [private], [exist_ok])
+
+Create a new model with the given `id`, of the form `<username>/<reponame>`.
+"""
 model_create(id; kw...) = create(Model, id; kw...)
+
+"""
+    space_create(id; [client], [private], [exist_ok], [sdk])
+
+Create a new space with the given `id`, of the form `<username>/<reponame>`.
+"""
 space_create(id; kw...) = create(Space, id; kw...)
 
+"""
+    delete(repo; [client])
+
+Delete the given `repo`.
+"""
 function delete(repo::AbstractRepo; client::Client=client())
     organization, name = _split_repo_id(repo.id)
     type = _repo_type(repo)
@@ -405,6 +467,13 @@ function delete(repo::AbstractRepo; client::Client=client())
     return
 end
 
+"""
+    update(repo; [client], [private])
+
+Update metadata on the given `repo`.
+
+Currently, you may only update the `private` setting.
+"""
 function update(repo::AbstractRepo; client::Client=client(), private::Union{Bool,Nothing}=nothing)
     id = _repo_id(repo)
     json = _api_json(; private)
@@ -414,6 +483,11 @@ function update(repo::AbstractRepo; client::Client=client(), private::Union{Bool
     return
 end
 
+"""
+    move(repo, dest; [client])
+
+Move the given `repo` to `dest`.
+"""
 function move(repo::AbstractRepo, toRepo::AbstractString; client::Client=client())
     fromRepo = _repo_id(repo)
     type = _repo_type(repo)
@@ -422,6 +496,13 @@ function move(repo::AbstractRepo, toRepo::AbstractString; client::Client=client(
     return
 end
 
+"""
+    file_upload(repo, path, file; [client], [revision])
+
+Upload the given `file` to `path` in `repo`.
+
+The `file` may be a readable IO stream or a filename.
+"""
 function file_upload(repo::AbstractRepo, path::AbstractString, file::IO; client::Client=client(), revision::AbstractString=_repo_revision(repo))
     revision === nothing && error("revision missing")
     id = _repo_id(repo)
@@ -437,6 +518,11 @@ function file_upload(repo::AbstractRepo, path::AbstractString, file::AbstractStr
     end
 end
 
+"""
+    file_delete(repo, path; [client], [revision])
+
+Delete the file `path` from the given `repo`.
+"""
 function file_delete(repo::AbstractRepo, path::AbstractString; client::Client=client(), revision::AbstractString=_repo_revision(repo))
     id = _repo_id(repo)
     prefix = _repo_prefix(repo)
@@ -445,6 +531,14 @@ function file_delete(repo::AbstractRepo, path::AbstractString; client::Client=cl
     return
 end
 
+"""
+    file_open(func, repo, path; [client], [revision], [result_type])
+
+Open the file `path` from the given `repo`, call `func` on the resulting IO stream and
+return the result.
+
+See also [`file_read`](@ref).
+"""
 function file_open(func::Function, repo::AbstractRepo, path::AbstractString; result_type::Type{T}=Any, client::Client=client(), revision::AbstractString=_repo_sha(repo)) where {T}
     id = _repo_id(repo)
     prefix = _repo_prefix(repo)
@@ -466,9 +560,23 @@ function file_open(func::Function, repo::AbstractRepo, path::AbstractString; res
     end
 end
 
+"""
+    file_read(repo, path, [T]; [client], [revision])
+
+Read the file `path` from the given `repo`.
+
+Returns a `Vector{UInt8}` by default, but can read a string by passing `T=String`.
+
+See also [`file_open`](@ref).
+"""
 file_read(repo::AbstractRepo, path; kw...) = file_open(read, repo, path; result_type=Vector{UInt8}, kw...)
 file_read(repo::AbstractRepo, path, ::Type{T}; kw...) where {T} = file_open(io->read(io, T), repo, path; result_type=T, kw...)
 
+"""
+    whoami(; [client])
+
+Information about the current Hugging Face Hub user.
+"""
 function whoami(; client=client())
     res = _api_request_json("GET", "api/whoami-v2"; client)
     return _from_json(User, res)
