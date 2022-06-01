@@ -7,9 +7,29 @@ abstract type Object end
 
 Base.convert(::Type{T}, x::JSON3.Object) where {T<:Object} = _from_json(T, x)
 
-_to_json(x::AbstractDict) = Dict{String,Any}(String(k)=>_to_json(v) for (k,v) in x)
-_to_json(x::AbstractVector) = Any[_to_json(x) for x in x]
-_to_json(x::Union{Real,AbstractString,Nothing}) = x
+function _to_json(x; tight::Bool=false)
+    @nospecialize x
+    if x isa Union{Real,AbstractString,Nothing}
+        return x
+    elseif x isa AbstractVector
+        if tight
+            return [_to_json(x; tight) for x in x]
+        else
+            return Any[_to_json(x; tight) for x in x]
+        end
+    elseif x isa AbstractDict
+        if tight
+            ks = sort([String(k) for k in keys(x)])
+            ns = Tuple(Symbol[Symbol(k) for k in ks])
+            vs = Tuple(Any[_to_json(x[k]; tight) for k in ks])
+            NamedTuple{ns}(vs)
+        else
+            return Dict{String}(String(k) => _to_json(v; tight) for (k, v) in x)
+        end
+    else
+        error("expecting nothing, number, string, vector or dict, got $(typeof(x))")
+    end
+end
 
 _id_field(x::Object) = hasfield(typeof(x), :id) ? :id : nothing
 _show_fields(x::Object) = _id_field(x) === nothing ? fieldnames(typeof(x)) : (_id_field(x),)

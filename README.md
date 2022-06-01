@@ -72,18 +72,7 @@ new clients and pass them as the `client` keyword argument to most other functio
 
 ### Inference API
 
-Refer to [the Hugging Face documentation](https://huggingface.co/docs/api-inference/detailed_parameters)
-for details about the inputs and parameters to these functions.
+Refer to [the Inference API documentation](https://huggingface.co/docs/api-inference/detailed_parameters)
+for details about inputs and parameters.
 
-- `infer` (convenience function to select one of the below functions automatically)
-- `infer_fill_mask` (Fill Mask inference)
-- `infer_text_generation` (Text Generation inference)
-- `infer_text2text_generation` (Text2Text Generation inference)
-- `infer_summarization` (Summarization inference)
-- `infer_text_classification` (Text Classification inference)
-- `infer_zero_shot_classification` (Zero-Shot Classification inference)
-- `infer_token_classification` (Token Classification inference)
-- `infer_translation` (Translation inference)
-- `infer_feature_extraction` (Feature Extraction inference)
-- `infer_question_answering` (Question Answering inference)
-- `infer_generic` (generic inference with no pre- or post-processing)
+- `infer` (call the Inference API, return the inference results)
