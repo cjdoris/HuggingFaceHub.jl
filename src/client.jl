@@ -25,8 +25,8 @@ client.
   the `HUGGING_FACE_HUB_TOKEN` environment variable or the `token_file`.
 - `token_file`: The file where the token is cached. It must either be an absolute path or
   be of the form `@name`, in which case it is stored in a scratch space which the Julia
-  package manager can delete when this package is uninstalled (see `token_file(; client)`
-  for the exact location).
+  package manager can delete when this package is uninstalled (see `token_file()` for the
+  exact location). Can be `nothing` to disable caching.
 - `api_url`: The base URL of the Hugging Face Hub API.
 - `inference_api_url`: The base URL of the Hugging Face Inference API.
 """
