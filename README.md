@@ -23,29 +23,26 @@ Read the docstrings for more information about each function.
 
 ### Repositories
 
-- `models()` (search for models)
-- `datasets()` (search for datasets)
-- `spaces()` (search for spaces)
-- `model(id)` (get info about a model)
-- `dataset(id)` (get info about a dataset)
-- `space(id)` (get info about a space)
-- `refresh(repo)` (return updated info for a repo)
-- `model_create(id)` (create a new model)
-- `dataset_create(id)` (create a new dataset)
-- `space_create(id)` (create a new space)
-- `delete(repo)` (delete a repo)
-- `update(repo)` (update metadata on a repo)
-- `move(repo, dest)` (move a repo)
-- `file_upload(repo, path, file)` (upload a file to a repo)
-- `file_delete(repo, path)` (delete a file from a repo)
-- `file_open(f, repo, path)` (open a file from a repo)
-- `file_read(repo, path, [T])` (read a file from a repo)
+- `Model()`: type representing a model
+- `Dataset()`: type representing a dataset
+- `Space()`: type representing a space
+- `search(repotype)`: search for repos of the given type
+- `info(repo)` or `info(repotype, id)`: information about a repo
+- `create(repo)` or `create(repotype, id)`: create a new repo
+- `delete(repo)` or `delete(repotype, id)`: delete a repo
+- `update(repo)` or `update(repotype, id)`: update metadata on a repo
+- `move(repo, dest)` or `move(repotype, id, dest)`: move a repo
 
-### Metadata
+### Other Metadata
 
-- `model_tags()` (dict of groups of model tags)
-- `dataset_tags()` (dict of groups of dataset tags)
-- `metrics()` (list of metrics)
+- `tags(repotype)`: dict of groups of tags
+- `metrics()`: list of metrics
+
+### Files
+
+- `file_download(repo, path)`: download a file from a repo
+- `file_upload(repo, path, file)`: upload a file to a repo
+- `file_delete(repo, path)`: delete a file from a repo
 
 ### Users / Tokens
 
@@ -58,11 +55,11 @@ you only need to do this once.
 
 Alternatively you can set the token in the environment variable `HUGGING_FACE_HUB_TOKEN`.
 
-- `whoami()` (get info about the current user)
-- `token()` (get the current token)
-- `token_set(token)` (set the token)
-- `token_prompt()` (set the token from a prompt)
-- `token_file()` (the file where the token is saved)
+- `whoami()`: get info about the current user
+- `token()`: get the current token
+- `token_set(token)`: set the token
+- `token_prompt()`: set the token from a prompt
+- `token_file()`: the file where the token is saved
 
 ### Clients
 
@@ -72,12 +69,12 @@ authenticate with.
 There is a global default client, which is suitable for most users. But you may also create
 new clients and pass them as the `client` keyword argument to most other functions.
 
-- `client()` (get the default client)
-- `Client()` (construct a new client)
+- `client()`: get the default client
+- `Client()`: construct a new client
 
 ### Inference API
 
 Refer to [the Inference API documentation](https://huggingface.co/docs/api-inference/detailed_parameters)
 for details about inputs and parameters.
 
-- `infer(model, inputs)` (call the Inference API, return the inference results)
+- `infer(model, inputs)`: call the Inference API, return the inference results
