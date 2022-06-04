@@ -14,6 +14,76 @@ A Julia package to interact with the [Hugging Face Hub](https://huggingface.co/)
 pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 ```
 
+## Example
+
+```julia-repl
+julia> import HuggingFaceHub as HF
+
+julia> HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5)
+5-element Vector{HuggingFaceHub.Model}:
+ "distilbert-base-uncased-finetuned-sst-2-english"
+ "distilbert-base-uncased"
+ "distilbert-base-multilingual-cased"
+ "distilbert-base-cased-distilled-squad"
+ "sentence-transformers/msmarco-distilbert-base-v4"
+
+julia> model = ans[2]
+HuggingFaceHub.Model:
+  id = "distilbert-base-uncased"
+  private = false
+  pipeline_tag = "fill-mask"
+
+julia> model = HF.info(model)
+HuggingFaceHub.Model:
+  id = "distilbert-base-uncased"
+  sha = "043235d6088ecd3dd5fb5ca3592b6913fd516027"
+  revision = "main"
+  lastModified = Dates.DateTime("2022-05-31T19:08:36")
+  private = false
+  files = [".gitattributes", "LICENSE", "README.md", "config.json", "flax_model.msgpack", "pytorch_model.bin", "rust_model.ot", "tf_model.h5", "tokenizer.json", "tokenizer_config.json", "vocab.txt"]
+  pipeline_tag = "fill-mask"
+  tags = ["pytorch", "tf", "jax", "rust", "distilbert", "fill-mask", "en", "dataset:bookcorpus", "dataset:wikipedia", "arxiv:1910.01108", "transformers", "exbert", "license:apache-2.0", "autotrain_compatible", "infinity_compatible"]
+  downloads = 7214355
+  library_name = "transformers"
+  mask_token = "[MASK]"
+  likes = 64
+  config = Dict{String, Any}("model_type" => "distilbert", "architectures" => Any["DistilBertForMaskedLM"])
+  cardData = Dict{String, Any}("language" => "en", "tags" => Any["exbert"], "license" => "apache-2.0", "datasets" => Any["bookcorpus", "wikipedia"])
+  transformersInfo = Dict{String, Any}("pipeline_tag" => "fill-mask", "processor" => "AutoTokenizer", "auto_model" => "AutoModelForMaskedLM")
+
+julia> HF.file_download(model, "config.json") |> read |> String |> print
+{
+  "activation": "gelu",
+  "architectures": [
+    "DistilBertForMaskedLM"
+  ],
+  "attention_dropout": 0.1,
+  "dim": 768,
+  "dropout": 0.1,
+  "hidden_dim": 3072,
+  "initializer_range": 0.02,
+  "max_position_embeddings": 512,
+  "model_type": "distilbert",
+  "n_heads": 12,
+  "n_layers": 6,
+  "pad_token_id": 0,
+  "qa_dropout": 0.1,
+  "seq_classif_dropout": 0.2,
+  "sinusoidal_pos_embds": false,
+  "tie_weights_": true,
+  "transformers_version": "4.10.0.dev0",
+  "vocab_size": 30522
+}
+
+julia> HF.infer(model, "The meaning of life is [MASK].")
+5-element Vector{NamedTuple{(:score, :sequence, :token, :token_str), Tuple{Float64, String, Int64, String}}}:
+ (score = 0.3163859248161316, sequence = "the meaning of life is unknown.", token = 4242, token_str = "unknown")
+ (score = 0.07957715541124344, sequence = "the meaning of life is unclear.", token = 10599, token_str = "unclear")
+ (score = 0.03341785818338394, sequence = "the meaning of life is uncertain.", token = 9662, token_str = "uncertain")
+ (score = 0.03218647092580795, sequence = "the meaning of life is ambiguous.", token = 20080, token_str = "ambiguous")
+ (score = 0.02055794931948185, sequence = "the meaning of life is simple.", token = 3722, token_str = "simple")
+```
+
 ## API
 
 None of these functions are exported. You can import the module like
@@ -23,26 +93,26 @@ Read the docstrings for more information about each function.
 
 ### Repositories
 
-- `Model()`: type representing a model
-- `Dataset()`: type representing a dataset
-- `Space()`: type representing a space
-- `search(repotype)`: search for repos of the given type
-- `info(repo)` or `info(repotype, id)`: information about a repo
-- `create(repo)` or `create(repotype, id)`: create a new repo
-- `delete(repo)` or `delete(repotype, id)`: delete a repo
-- `update(repo)` or `update(repotype, id)`: update metadata on a repo
-- `move(repo, dest)` or `move(repotype, id, dest)`: move a repo
+- `Model()`: Type representing a model.
+- `Dataset()`: Type representing a dataset.
+- `Space()`: Type representing a space.
+- `search(repotype)`: Search for repos of the given type.
+- `info(repo)` or `info(repotype, id)`: Information about a repo.
+- `create(repo)` or `create(repotype, id)`: Create a new repo.
+- `delete(repo)` or `delete(repotype, id)`: Delete a repo.
+- `update(repo)` or `update(repotype, id)`: Update metadata on a repo.
+- `move(repo, dest)` or `move(repotype, id, dest)`: Move a repo.
 
 ### Other Metadata
 
-- `tags(repotype)`: dict of groups of tags
-- `metrics()`: list of metrics
+- `tags(repotype)`: Dict of groups of tags.
+- `metrics()`: List of metrics.
 
 ### Files
 
-- `file_download(repo, path)`: download a file from a repo
-- `file_upload(repo, path, file)`: upload a file to a repo
-- `file_delete(repo, path)`: delete a file from a repo
+- `file_download(repo, path)`: Download a file from a repo, return its local path.
+- `file_upload(repo, path, file)`: Upload a file to a repo.
+- `file_delete(repo, path)`: Delete a file from a repo.
 
 ### Users / Tokens
 
@@ -55,11 +125,11 @@ you only need to do this once.
 
 Alternatively you can set the token in the environment variable `HUGGING_FACE_HUB_TOKEN`.
 
-- `whoami()`: get info about the current user
-- `token()`: get the current token
-- `token_set(token)`: set the token
-- `token_prompt()`: set the token from a prompt
-- `token_file()`: the file where the token is saved
+- `whoami()`: Get info about the current user.
+- `token()`: Get the current token.
+- `token_set(token)`: Set the token.
+- `token_prompt()`: Set the token from a prompt.
+- `token_file()`: The file where the token is saved.
 
 ### Clients
 
@@ -69,12 +139,12 @@ authenticate with.
 There is a global default client, which is suitable for most users. But you may also create
 new clients and pass them as the `client` keyword argument to most other functions.
 
-- `client()`: get the default client
-- `Client()`: construct a new client
+- `client()`: Get the default client.
+- `Client()`: Construct a new client.
 
 ### Inference API
 
 Refer to [the Inference API documentation](https://huggingface.co/docs/api-inference/detailed_parameters)
 for details about inputs and parameters.
 
-- `infer(model, inputs)`: call the Inference API, return the inference results
+- `infer(model, inputs)`: Call the Inference API, return the inference results.

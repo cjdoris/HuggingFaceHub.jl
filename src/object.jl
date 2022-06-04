@@ -89,7 +89,7 @@ function Base.show(io::IO, ::MIME"text/plain", x::Object)
         v === nothing && continue
         println(io)
         print(io, "  ", k, " = ")
-        show(io, v)
+        show(IOContext(io, :limit=>true), v)
     end
     blank && print(io, " (blank)")
     return
