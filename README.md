@@ -11,7 +11,7 @@ A Julia package to interact with the [Hugging Face Hub](https://huggingface.co/)
 ## Install
 
 ```julia-repl
-pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
+pkg> add HuggingFaceHub
 ```
 
 ## Tutorial
