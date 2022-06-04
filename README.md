@@ -16,7 +16,7 @@ pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 
 ## Tutorial
 
-HuggingFaceHub does not export any functions, so it is convenient to import it as `HF`:
+HuggingFaceHub does not export any functions, so it is convenient to import it as `HF`.
 
 ```julia
 import HuggingFaceHub as HF
@@ -108,6 +108,9 @@ Now let's use the Hugging Face Inference API to make some predictions. We see fr
 `model.pipeline_tag` that this model is for the Fill Mask task, and we see from
 `model.mask_token` that `[MASK]` is the mask token.
 
+If this step doesn't work, you probably need to authenticate yourself. See the Tokens
+section below.
+
 ```julia
 HF.infer(model, "The meaning of life is [MASK].")
 ```
@@ -121,9 +124,6 @@ HF.infer(model, "The meaning of life is [MASK].")
 ```
 
 ## API
-
-None of these functions are exported. You can import the module like
-`import HuggingFaceHub as HF` to access the functions like `HF.models()`.
 
 Read the docstrings for more information about each function.
 
