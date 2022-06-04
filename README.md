@@ -14,26 +14,47 @@ A Julia package to interact with the [Hugging Face Hub](https://huggingface.co/)
 pkg> add https://github.com/cjdoris/HuggingFaceHub.jl
 ```
 
-## Example
+## Tutorial
 
-```julia-repl
-julia> import HuggingFaceHub as HF
+HuggingFaceHub does not export any functions, so it is convenient to import it as `HF`:
 
-julia> HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5)
+```julia
+import HuggingFaceHub as HF
+```
+
+Here we search for models called 'distilbert', taking the top 5 by number of downloads.
+
+```julia
+HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5)
+```
+```
 5-element Vector{HuggingFaceHub.Model}:
  "distilbert-base-uncased-finetuned-sst-2-english"
  "distilbert-base-uncased"
  "distilbert-base-multilingual-cased"
  "distilbert-base-cased-distilled-squad"
  "sentence-transformers/msmarco-distilbert-base-v4"
+```
 
-julia> model = ans[2]
+Now we select a single model from the list, which displays some more information.
+
+```julia
+model = ans[2]
+```
+```
 HuggingFaceHub.Model:
   id = "distilbert-base-uncased"
   private = false
   pipeline_tag = "fill-mask"
+```
 
-julia> model = HF.info(model)
+Models returned from searching do not contain much information. The `info` function gets all
+the information.
+
+```julia
+model = HF.info(model)
+```
+```
 HuggingFaceHub.Model:
   id = "distilbert-base-uncased"
   sha = "043235d6088ecd3dd5fb5ca3592b6913fd516027"
@@ -50,8 +71,15 @@ HuggingFaceHub.Model:
   config = Dict{String, Any}("model_type" => "distilbert", "architectures" => Any["DistilBertForMaskedLM"])
   cardData = Dict{String, Any}("language" => "en", "tags" => Any["exbert"], "license" => "apache-2.0", "datasets" => Any["bookcorpus", "wikipedia"])
   transformersInfo = Dict{String, Any}("pipeline_tag" => "fill-mask", "processor" => "AutoTokenizer", "auto_model" => "AutoModelForMaskedLM")
+```
 
-julia> HF.file_download(model, "config.json") |> read |> String |> print
+We see in `model.files` that there is a `config.json` file. Let's download it and take a
+look.
+
+```julia
+HF.file_download(model, "config.json") |> read |> String |> print
+```
+```
 {
   "activation": "gelu",
   "architectures": [
@@ -74,8 +102,16 @@ julia> HF.file_download(model, "config.json") |> read |> String |> print
   "transformers_version": "4.10.0.dev0",
   "vocab_size": 30522
 }
+```
 
-julia> HF.infer(model, "The meaning of life is [MASK].")
+Now let's use the Hugging Face Inference API to make some predictions. We see from
+`model.pipeline_tag` that this model is for the Fill Mask task, and we see from
+`model.mask_token` that `[MASK]` is the mask token.
+
+```julia
+HF.infer(model, "The meaning of life is [MASK].")
+```
+```
 5-element Vector{NamedTuple{(:score, :sequence, :token, :token_str), Tuple{Float64, String, Int64, String}}}:
  (score = 0.3163859248161316, sequence = "the meaning of life is unknown.", token = 4242, token_str = "unknown")
  (score = 0.07957715541124344, sequence = "the meaning of life is unclear.", token = 10599, token_str = "unclear")
