@@ -25,7 +25,7 @@ import HuggingFaceHub as HF
 Here we search for models called 'distilbert', taking the top 5 by number of downloads.
 
 ```julia
-HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5)
+models = HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5)
 ```
 ```
 5-element Vector{HuggingFaceHub.Model}:
@@ -39,7 +39,7 @@ HF.search(HF.Model, search="distilbert", sort="downloads", direction=-1, limit=5
 Now we select a single model from the list, which displays some more information.
 
 ```julia
-model = ans[2]
+model = models[2]
 ```
 ```
 HuggingFaceHub.Model:
