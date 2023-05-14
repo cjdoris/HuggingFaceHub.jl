@@ -138,6 +138,16 @@ function _split_repo_id(id::AbstractString)
     end
 end
 
+function _api_json(; kw...)
+    ans = Dict{Symbol,Any}()
+    for (k, v) in kw
+        if v !== nothing
+            ans[k] = v
+        end
+    end
+    ans
+end
+
 """
     create(repo; [client], [exist_ok=false])
     create(repotype, id; ...)
