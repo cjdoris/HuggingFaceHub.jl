@@ -45,6 +45,9 @@ function _from_json(::Type{T}, x) where {T<:Object}
                 v2 = collect(String, v)
             elseif k == :scores
                 v2 = collect(Float64, v)
+            elseif k == :description && v isa AbstractVector && length(v) == 1
+                # there is one metric whose description is an array of one string!
+                v2 = v[1]
             elseif k in (:files, :raw)
                 continue
             else
