@@ -6,17 +6,18 @@ Upload the given `file` to `path` in `repo`.
 The `file` may be a readable IO stream or a filename.
 """
 function file_upload(repo::AbstractRepo, path::AbstractString, file::IO; client::Client=client())
+    type = _repo_type(repo)
     id = _repo_id(repo)
     revision = _repo_revision(repo)
     prefix = _repo_prefix(repo)
-    endpoint = "api/$prefix$id/upload/$revision/$path"
+    endpoint = "api/$(type)s/$prefix$id/upload/$revision/$path"
     _api_request("POST", endpoint; client, body=file)
     return
 end
 
 function file_upload(repo::AbstractRepo, path::AbstractString, file::AbstractString; kw...)
     open(file) do io
-        repo_file_upload(repo, path, io; kw...)
+        file_upload(repo, path, io; kw...)
     end
 end
 
