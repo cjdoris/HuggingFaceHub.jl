@@ -1,7 +1,7 @@
 name = "HuggingFaceHub"
 uuid = "d0076355-e2c0-48e6-a044-05906e51b7fc"
 authors = ["Christopher Doris <github.com/cjdoris>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
