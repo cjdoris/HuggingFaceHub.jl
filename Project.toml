@@ -1,7 +1,7 @@
 name = "HuggingFaceHub"
 uuid = "d0076355-e2c0-48e6-a044-05906e51b7fc"
-authors = ["Christopher Doris <github.com/cjdoris>"]
 version = "0.1.2"
+authors = ["Christopher Doris <github.com/cjdoris>"]
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -12,7 +12,7 @@ Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 
 [compat]
 Downloads = "1"
-HTTP = "0.9.17, 1"
+HTTP = "0.9.17, 1, 2"
 JSON3 = "1.9.5"
 Scratch = "1.1.0"
 julia = "1.6"
