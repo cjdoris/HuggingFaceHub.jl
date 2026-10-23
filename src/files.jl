@@ -43,6 +43,11 @@ const REGEX_COMMIT_HASH = r"^[0-9a-f]{40}$"
 
 Download a file from a repo to a local cache. Return the path to the local file.
 
+If `repo.revision` is a branch or tag, it is resolved to its current commit with a request to
+the Hub, so that new commits are picked up. If the Hub cannot be reached, the file of the commit
+the revision last resolved to is used, if it is cached. Files of a known commit (`repo.sha`, or a
+commit hash as `repo.revision`) are returned from the cache without any request.
+
 The `progress` argument is as for the `Downloads.download` function, namely it is called
 periodically like `progress(total, now)` where `total` is the total size of the download (or
 `0` if unknown) and `now` is the amount downloaded so far.
@@ -69,14 +74,11 @@ function file_download(repo::AbstractRepo, path::AbstractString; client::Client=
     # the cache dir for the repo
     repodir = joinpath(file_cache_dir(), _repo_types(repo), replace(id, "/"=>"--"))
 
-    # look up sha in refs, or save sha to refs
+    # save sha to refs; without a sha, the revision is resolved by the HEAD request below
+    # because the commit a branch or tag points to can change
     if sha === nothing
         if revision === nothing
             revision = "main"
-        end
-        refpath = joinpath(repodir, "refs", revision)
-        if isfile(refpath)
-            sha = read(refpath, String)
         end
     elseif revision !== nothing
         refpath = joinpath(repodir, "refs", revision)
@@ -103,7 +105,16 @@ function file_download(repo::AbstractRepo, path::AbstractString; client::Client=
     if tok !== nothing
         push!(headers, "Authorization" => "Bearer $(tok.value)")
     end
-    res0 = HTTP.request("HEAD", url; headers, redirect=false)
+    res0 = try
+        HTTP.request("HEAD", url; headers, redirect=false)
+    catch err
+        # the Hub cannot be reached: use the file of the commit the revision last resolved to
+        err isa HTTP.StatusError && rethrow()
+        ans = _cached_file(repodir, revision, locpath)
+        ans === nothing && rethrow()
+        @warn "Could not reach the Hugging Face Hub, using the cached file of $id@$revision" exception=err
+        return ans
+    end
 
     # get or check the commit sha
     sha0 = HTTP.header(res0, "X-Repo-Commit")
@@ -135,12 +146,13 @@ function file_download(repo::AbstractRepo, path::AbstractString; client::Client=
         error("ETag header is invalid, got $(repr(etag))")
     end
 
-    # get the redirected url
+    # get the redirected url (relative for files not stored with LFS)
     if 300 ≤ res0.status < 400
-        url = convert(String, HTTP.header(res0, "Location"))
-        if url == ""
+        location = convert(String, HTTP.header(res0, "Location"))
+        if location == ""
             error("Location header missing")
         end
+        url = string(HTTP.URIs.resolvereference(HTTP.URIs.URI(url), HTTP.URIs.URI(location)))
     end
 
     # the path to the blob
@@ -165,6 +177,15 @@ function file_download(repo::AbstractRepo, path::AbstractString; client::Client=
     end
 
     return ans
+end
+
+# The cached file at `locpath` of the commit that `revision` last resolved to, if any.
+function _cached_file(repodir, revision, locpath)
+    revision === nothing && return nothing
+    refpath = joinpath(repodir, "refs", revision)
+    isfile(refpath) || return nothing
+    ans = joinpath(repodir, "snapshots", read(refpath, String), locpath)
+    return isfile(ans) ? ans : nothing
 end
 
 
